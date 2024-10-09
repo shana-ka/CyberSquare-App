@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "954080835515",
+    "project_id": "cyber-square-app",
+    "storage_bucket": "cyber-square-app.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:954080835515:android:3889c1059b08dede3a369e",
+        "android_client_info": {
+          "package_name": "com.example.cybersquareapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAnaqWVN77bxpQc1qDrXTe3uINvghuaNU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
