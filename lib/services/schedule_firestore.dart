@@ -1,63 +1,47 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cybersquareapp/models/schedule_model.dart';
 
 class ScheduleFirestoreService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Get stream of mentor names in real-time
-  Stream<List<String>> getMentorsStream() {
-    return _firestore.collection('mentors').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => doc['name'] as String).toList();
-    });
-  }
-
-  // Save schedule for the selected date
   Future<void> submitSchedule(
-      String date, Map<String, Map<String, bool>> scheduleMap) async {
-    try {
-      await _firestore
-          .collection('schedules')
-          .doc(date)
-          .set({'date': date, 'scheduleMap': scheduleMap});
-      print("Schedule submitted successfully");
-    } catch (e) {
-      print("Error submitting schedule: $e");
+    String mentorName, String formattedDate, Map<String, Map<String, bool>> scheduleMap) async {
+    DocumentReference scheduleRef = _db.collection('schedules').doc('$mentorName-$formattedDate');
+
+    Map<String, dynamic> data = {
+      'mentorName': mentorName,
+      'date': formattedDate,
+      'schedule': {}
+    };
+
+    // Populate the schedule data
+    for (var batch in scheduleMap.keys) {
+      data['schedule'][batch] = scheduleMap[batch];
     }
+
+    // Set the data in Firestore
+    await scheduleRef.set(data, SetOptions(merge: true));
   }
 
-  // Fetch schedule for a specific date
-  Future<Schedule?> getSchedule(DateTime date) async {
-    String formattedDate =
-        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+  // Get Schedule
+  Future<Map<String, Map<String, bool>>> getSchedule(String formattedDate, String mentorName) async {
+    DocumentReference scheduleRef = _db.collection('schedules').doc('$mentorName-$formattedDate');
+    
+    DocumentSnapshot snapshot = await scheduleRef.get();
 
-    try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('schedules').doc(formattedDate).get();
+    if (snapshot.exists) {
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+      Map<String, Map<String, bool>> scheduleMap = {};
 
-      if (snapshot.exists && snapshot.data() != null) {
-        Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
-
-        Map<String, Map<String, bool>> scheduleMap =
-            (data['scheduleMap'] as Map<String, dynamic>).map(
-          (mentor, schedule) =>
-              MapEntry(mentor, Map<String, bool>.from(schedule)),
-        );
-
-        // Return the Schedule object
-        return Schedule(
-          date: data['date'] ??
-              formattedDate, // Use the date from Firestore or fallback
-          mentors: scheduleMap.keys.toList(),
-          scheduleMap: scheduleMap,
-        );
-      } else {
-        print('No schedule data found for this date');
-        return null;
+      // Populate the schedule map from Firestore data
+      if (data['schedule'] != null) {
+        scheduleMap = (data['schedule'] as Map).map((key, value) =>
+            MapEntry(key, (value as Map).map((k, v) => MapEntry(k, v as bool))));
       }
-    } catch (e) {
-      print('Error fetching schedule: $e');
-      return null;
+      
+      return scheduleMap;
+    } else {
+      return {};
     }
   }
 }
+

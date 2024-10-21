@@ -10,9 +10,19 @@ class BatchFirestoreService {
   // Fetch all batches from Firestore
   Stream<List<Batch>> getBatches() {
     return _firestore.collection('batches').snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => Batch.fromDocument(doc)).toList();
+      return snapshot.docs.map((doc) => Batch.fromFirestore(doc)).toList();
     });
   }
+
+  Stream<List<Batch>> getBatchesByMentor(String mentorName) {
+  return _batchCollection
+      .where('mentorName', isEqualTo: mentorName)
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map((doc) => Batch.fromFirestore(doc))
+          .toList());
+}
+
 
   Future<List<String>> getStudentsFromBatch(String batchId) async {
   try {

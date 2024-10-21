@@ -1,6 +1,8 @@
 import 'package:cybersquareapp/models/batch_model.dart';
+import 'package:cybersquareapp/models/mentor_model.dart';
 import 'package:cybersquareapp/models/student_model.dart';
 import 'package:cybersquareapp/services/batch_firetsore.dart';
+import 'package:cybersquareapp/services/mentor_firestore.dart';
 import 'package:cybersquareapp/services/student_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -25,19 +27,25 @@ class _BatchPageState extends State<BatchPage> {
 
   Future<void> _showBatchDialog({Batch? batch, String? docId}) async {
     bool isEditMode = batch != null;
-
     TextEditingController courseController =
-        TextEditingController(text: isEditMode ? batch.course : '');
+        TextEditingController(text: isEditMode ? batch!.course : '');
+    final List<String> durations = [
+      '1 Month',
+      '3 Months',
+      '6 Months',
+      '1 Year'
+    ];
+    String selectedDuration = isEditMode ? batch!.duration : durations[0];
+    String selectedMentor = isEditMode ? batch!.mentorName : '';
 
-    final List<String> durations = ['1 Month', '3 Months', '6 Months', '1 Year'];
-    String selectedDuration = isEditMode ? batch.duration : durations[0];
+    final MentorFirestoreService mentorService = MentorFirestoreService();
 
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           title:
-              Text(isEditMode ? 'Edit Batch ${batch.name}' : 'Add New Batch'),
+              Text(isEditMode ? 'Edit Batch ${batch!.name}' : 'Add New Batch'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -45,7 +53,43 @@ class _BatchPageState extends State<BatchPage> {
                 controller: courseController,
                 decoration: const InputDecoration(labelText: 'Course Name'),
               ),
-              DropdownButtonFormField(
+              StreamBuilder<List<Mentor>>(
+                stream: mentorService.getMentors(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const CircularProgressIndicator();
+                  }
+
+                  List<Mentor> mentors = snapshot.data!;
+                  if (mentors.isEmpty) {
+                    return const Text('No mentors available');
+                  }
+
+                  return DropdownButtonFormField<String>(
+                    decoration:
+                        const InputDecoration(labelText: 'Select Mentor'),
+                    value: selectedMentor.isNotEmpty ? selectedMentor : null,
+                    items: mentors.map((Mentor mentor) {
+                      return DropdownMenuItem<String>(
+                        value: mentor.name,
+                        child: Text(mentor.name),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        selectedMentor = newValue!;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please select a mentor';
+                      }
+                      return null;
+                    },
+                  );
+                },
+              ),
+              DropdownButtonFormField<String>(
                 value: selectedDuration,
                 decoration: const InputDecoration(labelText: 'Duration'),
                 items: durations.map((String duration) {
@@ -65,7 +109,7 @@ class _BatchPageState extends State<BatchPage> {
                   }
                   return null;
                 },
-              )
+              ),
             ],
           ),
           actions: <Widget>[
@@ -79,9 +123,10 @@ class _BatchPageState extends State<BatchPage> {
                     await _batchService.updateBatch(
                       docId,
                       Batch(
-                        id: batch.id,
-                        name: batch.name,
+                        id: batch!.id,
+                        name: batch!.name,
                         course: courseName,
+                        mentorName: selectedMentor,
                         duration: selectedDuration,
                       ),
                     );
@@ -94,6 +139,7 @@ class _BatchPageState extends State<BatchPage> {
                       id: '',
                       name: nextBatchName,
                       course: courseName,
+                      mentorName: selectedMentor,
                       duration: selectedDuration,
                     ),
                   );
@@ -229,7 +275,7 @@ class _BatchPageState extends State<BatchPage> {
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
                       child: ListView.builder(
                         itemCount: batches.length,
                         itemBuilder: (context, index) {
@@ -256,7 +302,8 @@ class _BatchPageState extends State<BatchPage> {
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold),
                               ),
-                              subtitle: Text('Duration : ${batch.duration}'),
+                              subtitle: Text(
+                                  'Duration : ${batch.duration}\nMentor : ${batch.mentorName}'),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

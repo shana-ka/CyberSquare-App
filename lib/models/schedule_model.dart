@@ -1,5 +1,5 @@
 class Schedule {
-  final String? date;
+  final DateTime? date;
   final List<String>? mentors;
   final Map<String, Map<String, bool>> scheduleMap;
 

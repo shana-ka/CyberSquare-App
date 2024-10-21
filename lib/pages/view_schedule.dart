@@ -1,40 +1,38 @@
 import 'package:cybersquareapp/components/current_date.dart';
-import 'package:cybersquareapp/models/batch_model.dart';
-import 'package:cybersquareapp/models/mentor_model.dart';
-import 'package:cybersquareapp/pages/view_schedule.dart';
-import 'package:cybersquareapp/services/batch_firetsore.dart';
-import 'package:cybersquareapp/services/mentor_firestore.dart';
-import 'package:cybersquareapp/services/schedule_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cybersquareapp/services/mentor_firestore.dart';
+import 'package:cybersquareapp/services/schedule_firestore.dart';
+import 'package:cybersquareapp/models/mentor_model.dart';
 
-class SchedulePage extends StatefulWidget {
-  const SchedulePage({super.key, required List<Mentor> mentors});
+class ViewSchedule extends StatefulWidget {
+  String? mentorName;
+  DateTime selectedDate;
+  ViewSchedule({
+    Key? key,
+      this.mentorName,
+     required this.selectedDate
+  }) : super(key: key);
 
   @override
-  State<SchedulePage> createState() => _SchedulePageState();
+  State<ViewSchedule> createState() => _ViewScheduleState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _ViewScheduleState extends State<ViewSchedule> {
+  final ScheduleFirestoreService _scheduleService = ScheduleFirestoreService();
   final MentorFirestoreService _mentorService = MentorFirestoreService();
-  final BatchFirestoreService _batchService = BatchFirestoreService();
 
   String? selectedMentor;
-  List<Batch> mentorBatches = [];
   DateTime? selectedDate;
-  final ScheduleFirestoreService _scheduleService = ScheduleFirestoreService();
   List<Mentor> _mentors = [];
-
-  // Time slots and schedule map
-  final List<String> _timeSlots = ['9:30-11:30', '11:30-2:30', '2:30-4:30'];
-  Map<String, Map<String, bool>> scheduleMap =
-      {}; // Maps batch -> (timeSlot -> marked/unmarked)
+  Map<String, Map<String, bool>> scheduleMap = {};
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _fetchMentors();
-    selectedDate = DateTime.now();
+    selectedDate = DateTime.now(); // Initialize with the current date
   }
 
   Future<void> _fetchMentors() async {
@@ -46,60 +44,34 @@ class _SchedulePageState extends State<SchedulePage> {
     });
   }
 
-  void _fetchBatchesForMentor(String mentorName) async {
-    mentorBatches.clear();
-    scheduleMap.clear();
+  Future<void> _fetchSchedule() async {
+    if (selectedDate == null || selectedMentor == null) return;
 
-    Stream<List<Batch>> batchStream =
-        _batchService.getBatchesByMentor(mentorName);
-    batchStream.listen((batches) {
-      setState(() {
-        mentorBatches = batches;
-
-        for (var batch in mentorBatches) {
-          if (!scheduleMap.containsKey(batch.name)) {
-            scheduleMap[batch.name] = {
-              for (var slot in _timeSlots) slot: false,
-            };
-          }
-        }
-      });
-    });
-  }
-
-  Future<void> _submitSchedule() async {
-    if (selectedDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a date')),
-      );
-      return;
-    }
-    if (selectedMentor == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a mentor')),
-      );
-      return;
-    }
-
-    if (scheduleMap.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please mark at least one time slot')),
-      );
-      return;
-    }
-
-    // Format the selected date as a string
     String formattedDate = DateFormat('yyyy-MM-dd').format(selectedDate!);
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
-      await _scheduleService.submitSchedule(
-          selectedMentor!, formattedDate, scheduleMap);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Schedule submitted successfully')),
-      );
+      final scheduleData =
+          await _scheduleService.getSchedule(formattedDate, selectedMentor!);
+      setState(() {
+        scheduleMap = scheduleData;
+        _isLoading = false;
+      });
+      if (scheduleMap.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content:
+                  Text('No schedule found for the selected date and mentor.')),
+        );
+      }
     } catch (error) {
+      setState(() {
+        _isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error submitting schedule: $error')),
+        SnackBar(content: Text('Error fetching schedule: $error')),
       );
     }
   }
@@ -127,7 +99,7 @@ class _SchedulePageState extends State<SchedulePage> {
                       Padding(
                         padding: EdgeInsets.only(bottom: 15.0),
                         child: Text(
-                          'MENTOR\'S SCHEDULE',
+                          'VIEW SCHEDULE',
                           style: TextStyle(
                             color: Color.fromARGB(255, 254, 255, 254),
                             fontWeight: FontWeight.bold,
@@ -139,7 +111,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   ),
                 ),
               ),
-              // Date Selection and Mentor Dropdown
+              // Mentor Dropdown and Date Selection
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 7.0),
                 child: Card(
@@ -168,16 +140,11 @@ class _SchedulePageState extends State<SchedulePage> {
                                 onChanged: (String? newValue) {
                                   setState(() {
                                     selectedMentor = newValue;
-                                    mentorBatches
-                                        .clear(); 
-                                    if (newValue != null) {
-                                      _fetchBatchesForMentor(newValue);
-                                    }
                                   });
                                 },
                                 items: _mentors.map((Mentor mentor) {
                                   return DropdownMenuItem<String>(
-                                    value: mentor.name, // Use mentor name
+                                    value: mentor.name,
                                     child: Text(mentor.name),
                                   );
                                 }).toList(),
@@ -206,13 +173,36 @@ class _SchedulePageState extends State<SchedulePage> {
                             ),
                           ],
                         ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 80.0),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  const Color.fromARGB(255, 233, 236, 235),
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed:
+                                (selectedMentor != null && selectedDate != null)
+                                    ? _fetchSchedule
+                                    : null,
+                            child: const Text('View Schedule',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: Color.fromARGB(255, 59, 59, 59))),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
-              // Batch and Time Slots Table
-              if (mentorBatches.isNotEmpty)
+              // Schedule Table
+              if (_isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (scheduleMap.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12.0, vertical: 8.0),
@@ -226,8 +216,8 @@ class _SchedulePageState extends State<SchedulePage> {
                       3: FlexColumnWidth(1),
                     },
                     children: [
-                      TableRow(children: [
-                        const Padding(
+                      const TableRow(children: [
+                        Padding(
                           padding: EdgeInsets.all(8.0),
                           child: Text(
                             'Batch',
@@ -235,96 +225,63 @@ class _SchedulePageState extends State<SchedulePage> {
                                 fontWeight: FontWeight.bold, fontSize: 16),
                           ),
                         ),
-                        for (var slot in _timeSlots)
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              slot,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 15),
-                            ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            '9:30-11:30',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15),
                           ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            '11:30-2:30',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.all(8.0),
+                          child: Text(
+                            '2:30-4:30',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                        ),
                       ]),
-                      for (var batch in mentorBatches)
+                      for (var batch in scheduleMap.keys)
                         TableRow(children: [
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Text(
-                              batch.name,
+                              batch,
                               style: const TextStyle(
                                   fontSize: 16, fontStyle: FontStyle.italic),
                             ),
                           ),
-                          for (var slot in _timeSlots)
+                          for (var timeSlot in [
+                            '9:30-11:30',
+                            '11:30-2:30',
+                            '2:30-4:30'
+                          ])
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Checkbox(
-                                activeColor:
-                                    const Color.fromARGB(255, 170, 182, 177),
-                                value: scheduleMap[batch.name]?[slot] ?? false,
-                                onChanged: (bool? value) {
-                                  setState(() {
-                                    scheduleMap[batch.name]?[slot] =
-                                        value ?? false;
-                                  });
-                                },
+                                value: scheduleMap[batch]?[timeSlot] ?? false,
+                                onChanged: null, 
                               ),
                             ),
                         ]),
                     ],
                   ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                      'No schedule found for the selected date and mentor.'),
                 ),
-              // Submit and View Schedule buttons
-              Padding(
-                padding: const EdgeInsets.all(10),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed:_submitSchedule,
-                  child: const Text(
-                    'SUBMIT',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Color.fromARGB(255, 59, 59, 59),
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 10.0,right: 10),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ViewSchedule(
-                          mentorName: selectedMentor,
-                          selectedDate: selectedDate!,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'View Scehdule',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Color.fromARGB(255, 59, 59, 59),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),

@@ -5,6 +5,7 @@ class Batch {
   final String name;
   final String course;
   final String duration;
+  final String mentorName;
   // final int? noStud;
   // final List<String> students;
   // Timestamp timestamp; // Add this field
@@ -13,18 +14,20 @@ class Batch {
     this.id,
     required this.name,
     required this.course,
+    required this.mentorName,
     required this.duration,
     // this.noStud,
     // required this.students,
     // required this.timestamp,
   });
 
-  factory Batch.fromDocument(DocumentSnapshot doc) {
+  factory Batch.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map;
     return Batch(
         id: doc.id,
         name: data['name'] ?? '',
         course: data['course'] ?? '',
+        mentorName: data['mentorName']??'',
         duration: data['duration']??'',
         // noStud: data['noStud'] ?? 0,
         // students: List<String>.from(data['students'] ?? []),
@@ -36,6 +39,7 @@ class Batch {
       'name': name,
       'course': course,
       'duration':duration,
+      'mentorName':mentorName
       // 'noStud': noStud,
       // 'students': students,
       // 'timestamp': timestamp

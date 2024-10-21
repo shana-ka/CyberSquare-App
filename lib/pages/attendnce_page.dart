@@ -1,3 +1,4 @@
+import 'package:cybersquareapp/components/current_date.dart';
 import 'package:cybersquareapp/models/attndnc_model.dart';
 import 'package:cybersquareapp/models/student_model.dart';
 import 'package:cybersquareapp/models/batch_model.dart';
@@ -6,7 +7,6 @@ import 'package:cybersquareapp/services/attndnc_firestore.dart';
 import 'package:cybersquareapp/services/student_firestore.dart';
 import 'package:cybersquareapp/services/batch_firetsore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class AttendancePage extends StatefulWidget {
   const AttendancePage({super.key});
@@ -86,14 +86,6 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   void _viewAttendance() {
-    // if (_selectedBatch == null || _students.isEmpty) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(
-    //         content: Text('Please select a batch to view attendance')),
-    //   );
-    //   return;
-    // }
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -203,11 +195,14 @@ class _AttendancePageState extends State<AttendancePage> {
                             ),
                           ),
                           const SizedBox(width: 100),
-                          Text(DateFormat.yMMMd().format(_selectedDate)),
-                          IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectDate(context),
-                          ),
+                           CalendarDateWidget(
+                              initialDate: _selectedDate,
+                              onDateSelected: (DateTime date) {
+                                setState(() {
+                                  _selectedDate = date;
+                                });
+                              },
+                            ),
                         ],
                       ),
                     ],
@@ -222,7 +217,7 @@ class _AttendancePageState extends State<AttendancePage> {
             Expanded(
               child: _students.isEmpty
                   ? const Center(
-                      child: Text('No students available for this batch.'))
+                      child: Text('No students available for this date and batch.'))
                   : ListView.builder(
                       itemCount: _students.length,
                       itemBuilder: (context, index) {
@@ -256,24 +251,27 @@ class _AttendancePageState extends State<AttendancePage> {
                     ),
             ),
         
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
-              ),
-              onPressed: _saveAttendance,
-              child: const Text(
-                'SUBMIT',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: Color.fromARGB(255, 59, 59, 59)),
+                onPressed: _saveAttendance,
+                child: const Text(
+                  'SUBMIT',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: Color.fromARGB(255, 59, 59, 59)),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(10.0),
+              padding: const EdgeInsets.only(left:10.0,right:10,bottom:10),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),

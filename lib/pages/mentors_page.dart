@@ -10,7 +10,7 @@ class MentorsPage extends StatefulWidget {
 }
 
 class _MentorsPageState extends State<MentorsPage> {
-  final FirestoreService firestoreService = FirestoreService();
+  final MentorFirestoreService firestoreService = MentorFirestoreService();
   
 
   @override

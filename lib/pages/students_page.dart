@@ -5,7 +5,7 @@ import 'package:cybersquareapp/services/student_firestore.dart';
 import 'package:flutter/material.dart';
 
 class StudentsPage extends StatefulWidget {
-const  StudentsPage({super.key});
+  const StudentsPage({super.key});
 
   @override
   State<StudentsPage> createState() => _StudentsPageState();
@@ -13,7 +13,7 @@ const  StudentsPage({super.key});
 
 class _StudentsPageState extends State<StudentsPage> {
   final FirestoreService firestoreService = FirestoreService();
- List<Student> allStudents = [];
+  List<Student> allStudents = [];
   List<Student> filteredStudents = [];
   String? selectedBatch;
 
@@ -33,18 +33,19 @@ class _StudentsPageState extends State<StudentsPage> {
   void filterStudentsByBatch(String? batchName) {
     setState(() {
       if (batchName == null || batchName.isEmpty) {
-        filteredStudents = allStudents; // If no batch is selected, show all students
+        filteredStudents =
+            allStudents; // If no batch is selected, show all students
       } else {
-        filteredStudents = allStudents
-            .where((student) => student.batch == batchName)
-            .toList();
+        filteredStudents =
+            allStudents.where((student) => student.batch == batchName).toList();
       }
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:const Color.fromARGB(255, 251, 250, 250),
+      backgroundColor: const Color.fromARGB(255, 251, 250, 250),
       body: SafeArea(
         child: StreamBuilder<List<Student>>(
           stream: firestoreService.getStudents(),
@@ -52,13 +53,13 @@ class _StudentsPageState extends State<StudentsPage> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-        
+
             if (snapshot.hasError) {
               return Center(child: Text('Error: ${snapshot.error}'));
             }
-        
+
             final students = snapshot.data ?? [];
-        
+
             return SingleChildScrollView(
               child: SafeArea(
                 child: Column(
@@ -116,14 +117,15 @@ class _StudentsPageState extends State<StudentsPage> {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(9),
-                          color:const  Color.fromARGB(255, 232, 233, 233),
+                          color: const Color.fromARGB(255, 232, 233, 233),
                         ),
                         child: ListView.builder(
                           itemCount: students.length,
                           itemBuilder: (context, index) {
                             final student = students[index];
-                            return Padding( 
-                              padding: const EdgeInsets.only(top: 10.0, left: 8, right: 8),
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                  top: 10.0, left: 8, right: 8),
                               child: Card(
                                 color: const Color.fromARGB(255, 251, 250, 250),
                                 elevation: 3,
@@ -146,17 +148,20 @@ class _StudentsPageState extends State<StudentsPage> {
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.edit),
-                                        onPressed: () => _showStudentDialog(context, student),
+                                        onPressed: () => _showStudentDialog(
+                                            context, student),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete),
                                         onPressed: () {
                                           if (student.id != null) {
-                                            firestoreService.deleteStudent(student.id!);
+                                            firestoreService
+                                                .deleteStudent(student.id!);
                                           } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('No document ID found for student'))
-                                            );
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(const SnackBar(
+                                                    content: Text(
+                                                        'No document ID found for student')));
                                           }
                                         },
                                       ),
@@ -180,14 +185,19 @@ class _StudentsPageState extends State<StudentsPage> {
   }
 
   void _showStudentDialog(BuildContext context, Student? student) {
-    final TextEditingController nameController = TextEditingController(text: student?.name ?? '');
-    final TextEditingController studIdController = TextEditingController(text: student?.studId ?? '');
-    final TextEditingController courseController = TextEditingController(text: student?.course ?? '');
+    final TextEditingController nameController =
+        TextEditingController(text: student?.name ?? '');
+    final TextEditingController studIdController =
+        TextEditingController(text: student?.studId ?? '');
+    final TextEditingController courseController =
+        TextEditingController(text: student?.course ?? '');
     // final TextEditingController batchController = TextEditingController(text: student?.batch ?? '');
-    final TextEditingController phoneController = TextEditingController(text: student?.phone ?? '');
-    final TextEditingController emailController = TextEditingController(text: student?.email ?? '');
+    final TextEditingController phoneController =
+        TextEditingController(text: student?.phone ?? '');
+    final TextEditingController emailController =
+        TextEditingController(text: student?.email ?? '');
     String? selectedBatch = student?.batch;
-    final BatchFirestoreService batchService =BatchFirestoreService();
+    final BatchFirestoreService batchService = BatchFirestoreService();
 
     showDialog(
       context: context,
@@ -226,7 +236,8 @@ class _StudentsPageState extends State<StudentsPage> {
                     }
 
                     return DropdownButtonFormField<String>(
-                      decoration:const InputDecoration(labelText: 'Select Batch'),
+                      decoration:
+                          const InputDecoration(labelText: 'Select Batch'),
                       value: selectedBatch,
                       items: batches.map((Batch batch) {
                         return DropdownMenuItem<String>(
@@ -261,7 +272,7 @@ class _StudentsPageState extends State<StudentsPage> {
           ),
           actions: [
             TextButton(
-              child:const Text('Cancel'),
+              child: const Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -301,8 +312,7 @@ class _StudentsPageState extends State<StudentsPage> {
                   Navigator.of(context).pop();
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                  const  SnackBar(content: Text('All fields are required'))
-                  );
+                      const SnackBar(content: Text('All fields are required')));
                 }
               },
             ),
@@ -312,9 +322,3 @@ class _StudentsPageState extends State<StudentsPage> {
     );
   }
 }
-
-
-
-
-
-

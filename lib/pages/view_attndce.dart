@@ -188,7 +188,9 @@ class _ViewAttendancePageState extends State<ViewAttendancePage> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          onPressed: _fetchAttendance,
+                          onPressed: 
+                          (_selectedBatch != null && _selectDate != null)? _fetchAttendance:null,
+                          // _fetchAttendance,
                           child: const Text('View Attendance',
                               style: TextStyle(
                                   fontSize: 16,
